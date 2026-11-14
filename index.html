@@ -273,6 +273,7 @@ const AU=(()=>{
     if(ctx){if(ctx.state==='suspended'&&!document.hidden)ctx.resume();return true;}
     const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
     try{ctx=new AC();}catch(e){ctx=null;return false;}
+    if(ctx.state==='suspended'){try{ctx.resume();}catch(e){}}
     comp=ctx.createDynamicsCompressor();comp.threshold.value=-14;comp.knee.value=8;comp.ratio.value=5;comp.attack.value=.004;comp.release.value=.16;
     const out=ctx.createGain();out.gain.value=.85;comp.connect(out);out.connect(ctx.destination);
     musicBus=ctx.createGain();sfxBus=ctx.createGain();musicBus.connect(comp);sfxBus.connect(comp);
@@ -1080,6 +1081,7 @@ cv.addEventListener('pointermove',e=>{
 const pUp=e=>{if(IN.stick&&IN.stick.id===e.pointerId)stickOff();};
 cv.addEventListener('pointerup',pUp);cv.addEventListener('pointercancel',pUp);
 document.addEventListener('touchmove',e=>{if(!(e.target.closest&&e.target.closest('.scroll,input')))e.preventDefault();},{passive:false});
+document.addEventListener('touchend',()=>{AU.init();},{capture:true});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('pointerdown',()=>{AU.init();AU.start();},{capture:true});
 let padStart=false;
