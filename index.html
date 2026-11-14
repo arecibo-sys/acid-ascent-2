@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05030d">
-<title>ACID ASCENT 2 · CHOPPER RESCUE (v2)</title>
+<title>ACID ASCENT 2 · CHOPPER RESCUE (v2.1)</title>
 <style>
 :root{
   --acc:#ff2bd6; --acc2:#00f0ff; --acid:#b6ff00;
@@ -257,7 +257,7 @@ let TH=THEMES[0];
    ====================================================================== */
 const AU=(()=>{
   let ctx=null,comp,musicBus,sfxBus,duck,noiseBuf,osc,f1,f2,vca,delay,dSend,hatF,clapF,stabF,kickSh;
-  let timer=0,nextT=0,step=0,bar=0,bpm=136,root=33,on=false,inten=.25,tInten=.25,brk=0,brkLen=4,patA=[],patB=[],seed=7,kicks=[];
+  let timer=0,nextT=0,step=0,bar=0,bpm=136,root=33,on=false,unlockBuf=false,announced=false,inten=.25,tInten=.25,brk=0,brkLen=4,patA=[],patB=[],seed=7,kicks=[];
   const mtof=m=>440*Math.pow(2,(m-69)/12);
   function curve(k){const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(x*k)/Math.tanh(k);}return c;}
   function gen(sd){const r=mulberry(sd),sc=[0,0,0,0,12,12,3,7,10,1,-2,15,5],p=[];
@@ -270,7 +270,7 @@ const AU=(()=>{
   function newPats(){patA=gen(seed*31+root);patB=mutate(patA,seed*77+3);}
   function setVol(){if(!ctx)return;const t=ctx.currentTime;musicBus.gain.setTargetAtTime(opt.mute?0:opt.music*.95,t,.03);sfxBus.gain.setTargetAtTime(opt.mute?0:opt.sfx*.9,t,.03);}
   function init(){
-    if(ctx){if(ctx.state==='suspended'&&!document.hidden)ctx.resume();return true;}
+    if(ctx){if(ctx.state==='suspended'){try{ctx.resume();}catch(e){}}return true;}
     const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
     try{ctx=new AC();}catch(e){ctx=null;return false;}
     if(ctx.state==='suspended'){try{ctx.resume();}catch(e){}}
@@ -380,6 +380,9 @@ const AU=(()=>{
     init,setVol,
     get ok(){return !!ctx;},
     start(){if(!ctx||on)return;on=true;nextT=ctx.currentTime+.08;step=0;if(!timer)timer=setInterval(sched,25);},
+    unlock(){if(!ctx||ctx.state!=='running'||unlockBuf)return;
+      try{const b=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.08),ctx.sampleRate),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);s.stop(.1);unlockBuf=true;}catch(e){}
+      if(!announced){announced=true;try{toast('AUDIO UNLOCKED','v2.1 sound engine',false);}catch(e){}}},
     setIntensity(x){tInten=clamp(x,0,1);},
     setLevel(n){root=[33,31,36,29,34,32][(n-1)%6];bpm=Math.min(134+n*2,148);seed=n*11+3;if(ctx)newPats();},
     breakdown(n){brk=brkLen=n;},
@@ -1081,9 +1084,10 @@ cv.addEventListener('pointermove',e=>{
 const pUp=e=>{if(IN.stick&&IN.stick.id===e.pointerId)stickOff();};
 cv.addEventListener('pointerup',pUp);cv.addEventListener('pointercancel',pUp);
 document.addEventListener('touchmove',e=>{if(!(e.target.closest&&e.target.closest('.scroll,input')))e.preventDefault();},{passive:false});
-document.addEventListener('touchend',()=>{AU.init();},{capture:true});
+document.addEventListener('touchend',()=>{AU.init();AU.start();AU.unlock();},{capture:true});
+document.addEventListener('touchstart',()=>{AU.init();AU.start();AU.unlock();},{passive:true,capture:true});
 document.addEventListener('contextmenu',e=>e.preventDefault());
-document.addEventListener('pointerdown',()=>{AU.init();AU.start();},{capture:true});
+document.addEventListener('pointerdown',()=>{AU.init();AU.start();AU.unlock();},{capture:true});
 let padStart=false;
 function pollPad(){
   IN.pad=null;if(!navigator.getGamepads)return;let gp=null;try{for(const p of navigator.getGamepads())if(p&&p.connected){gp=p;break;}}catch(e){return;}
